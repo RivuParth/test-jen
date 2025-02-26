@@ -8,10 +8,17 @@ pipeline {
     }
 
     stages {
+
+         stage('Clean Workspace') {
+            steps {
+                deleteDir() // Deletes the entire workspace
+            }
+        }
+        
         stage('Checkout Code') {
             steps {
                 // Checkout the Terraform code from your repository
-                git 'https://github.com/ranarahul3480/test-jen.git'
+                git 'https://github.com/RivuParth/test-jen'
             }
         }
 
