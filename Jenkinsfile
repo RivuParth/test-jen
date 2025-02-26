@@ -1,54 +1,53 @@
 pipeline {
-
-    parameters {
-        booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply after generating plan?')
-    } 
+    agent any
+    
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY') // Jenkins AWS credential ID
+        AWS_DEFAULT_REGION = 'ap-south-1'  // Set your desired region
     }
 
-   agent  any
     stages {
-        stage('checkout') {
+        stage('Checkout Code') {
             steps {
-                 script{
-                        dir("terraform")
-                        {
-                            git "https://github.com/ranarahul3480/test-jen.git"
-                        }
-                    }
-                }
-            }
-
-        stage('Plan') {
-            steps {
-                sh 'pwd;cd terraform/ ; terraform init'
-                sh "pwd;cd terraform/ ; terraform plan -out tfplan"
-                sh 'pwd;cd terraform/ ; terraform show -no-color tfplan > tfplan.txt'
+                // Checkout the Terraform code from your repository
+                git 'https://github.com/ranarahul3480/test-jen.git'
             }
         }
-        stage('Approval') {
-           when {
-               not {
-                   equals expected: true, actual: params.autoApprove
-               }
-           }
 
-           steps {
-               script {
-                    def plan = readFile 'terraform/tfplan.txt'
-                    input message: "Do you want to apply the plan?",
-                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
-               }
-           }
-       }
-
-        stage('Apply') {
+        stage('Initialize Terraform') {
             steps {
-                sh "pwd;cd terraform/ ; terraform apply -input=false tfplan"
+                // Initialize Terraform in the working directory
+                sh 'terraform init'
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                // Run terraform plan to see what changes will be applied
+                sh 'terraform plan'
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                input message: 'Do you want to apply the changes?', ok: 'Apply'  // Optional approval step
+                // Apply the Terraform changes
+                sh 'terraform apply -auto-approve'
             }
         }
     }
 
-  }
+    post {
+        success {
+            echo 'Terraform deployment successful!'
+        }
+        failure {
+            echo 'Terraform deployment failed!'
+        }
+        always {
+            // Clean up after the pipeline if needed
+            echo 'Cleaning up...'
+        }
+    }
+}
